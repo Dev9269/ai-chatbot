@@ -1,44 +1,46 @@
-// =============================================================
-//  api.js  —  All server communication
-//  Frontend calls Python backend at localhost:5000
-//  API keys are safe in server.py, never exposed here
-// =============================================================
+/*
+    api.js - Connects Frontend to Backend
+    --------------------------------------
+    This file is the bridge between the browser and the Python server.
+    It sends the user's message to the server and gets back an AI reply and images.
+    API keys are never stored here — they live safely in server.py.
+*/
 
-const BASE_URL = 'https://ai-chatbot-1-401a.onrender.com';
+const BACKEND_URL = 'https://ai-chatbot-1-401a.onrender.com';
 
 
-// ── Send message to AI and get a reply ────────────────────────
+/* Send the user's message to the AI and return the reply */
 export async function askAI(history, message) {
-    const res = await fetch(`${BASE_URL}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ history, message })
+    const response = await fetch(`${BACKEND_URL}/api/chat`, {
+        method  : 'POST',
+        headers : { 'Content-Type': 'application/json' },
+        body    : JSON.stringify({ history, message })
     });
 
-    if (res.status === 429) throw new Error('too many requests, wait a bit');
-    if (!res.ok)            throw new Error('server error: ' + res.status);
+    if (response.status === 429) throw new Error('Too many requests, please wait a moment.');
+    if (!response.ok) throw new Error('Server error: ' + response.status);
 
-    const data = await res.json();
+    const data = await response.json();
     if (data.error) throw new Error(data.error);
     return data.reply;
 }
 
 
-// ── Fetch images from Unsplash via backend ────────────────────
+/* Fetch relevant images from Unsplash based on a search keyword */
 export async function fetchImages(query, count = 4) {
     if (!query) return [];
 
-    const res = await fetch(`${BASE_URL}/api/images?q=${encodeURIComponent(query)}&count=${count}`);
-    if (!res.ok) return [];
+    const response = await fetch(`${BACKEND_URL}/api/images?q=${encodeURIComponent(query)}&count=${count}`);
+    if (!response.ok) return [];
 
-    const data = await res.json();
+    const data = await response.json();
     return data.images || [];
 }
 
 
-// ── Extract the best keyword(s) from a user message ──────────
-export function getKeyword(msg) {
-    const stopwords = [
+/* Pull out the most meaningful keyword(s) from the user's message for image search */
+export function getKeyword(message) {
+    const commonWords = [
         'a','an','the','is','are','was','were','be','been','have','has',
         'do','does','did','will','would','could','should','can','i','you',
         'he','she','it','we','they','me','my','your','his','her','our',
@@ -48,16 +50,16 @@ export function getKeyword(msg) {
         'not','no','any','some','all'
     ];
 
-    const words = msg.toLowerCase()
+    const keywords = message.toLowerCase()
         .replace(/[^a-z0-9\s]/g, '')
         .split(' ')
-        .filter(w => w.length > 2 && !stopwords.includes(w));
+        .filter(word => word.length > 2 && !commonWords.includes(word));
 
-    return words.slice(0, 3).join(' ') || msg.slice(0, 25);
+    return keywords.slice(0, 3).join(' ') || message.slice(0, 25);
 }
 
 
-// ── Extract image URLs the AI may have included in its reply ──
+/* Find any direct image URLs that the AI included in its reply */
 export function extractImageUrls(text) {
     const matches = text.match(/https?:\/\/[^\s)"']+\.(?:jpg|jpeg|png|gif|webp)(?:[^\s)"']*)?/gi);
     return (matches || []).slice(0, 4).map(url => ({

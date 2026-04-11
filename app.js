@@ -1,84 +1,71 @@
-// =============================================================
-//  app.js  —  Frontend Logic
-//
-//  HOW IT WORKS:
-//  User types → sendMsg() → api.js → Python server.py → Groq AI
-//                                  → Python server.py → Unsplash images
-//
-//  SECTIONS (each feature is self-contained):
-//    1. Imports & DOM
-//    2. Login / Leave
-//    3. Send Message
-//    4. Render Messages
-//    5. Image Grid & Modal
-//    6. Sidebar & Theme
-//    7. Save & Load Chat
-// =============================================================
+/*
+    app.js - Frontend Logic
+    -----------------------
+    This file controls everything the user sees and does.
+
+    How it works:
+      1. User enters their name on the login screen
+      2. User types a message and hits Send
+      3. Message is sent to the Python backend (api.js handles this)
+      4. Backend replies with an AI response + relevant images
+      5. Everything is saved in the browser so chat history is kept
+*/
 
 import { askAI, fetchImages, getKeyword, extractImageUrls } from './api.js';
 
-// ─────────────────────────────────────────────────────────────
-//  1. IMPORTS & DOM  —  all element references in one place
-// ─────────────────────────────────────────────────────────────
+
+/* ---------- Grab all HTML elements we need ---------- */
 
 const $ = id => document.getElementById(id);
 
-// screens
 const loginScreen = $('login-screen');
 const chatScreen  = $('chat-screen');
+const loginForm   = $('login-form');
+const nameInput   = $('nickname');
 
-// login
-const loginForm = $('login-form');
-const nameInput = $('nickname');
+const msgList     = $('messages');
+const msgBox      = $('msg-box');
+const sendBtn     = $('send-btn');
+const typingDiv   = $('typing');
+const charCount   = $('char-count');
+const userInfo    = $('user-info');
 
-// chat
-const msgList   = $('messages');
-const msgBox    = $('msg-box');
-const sendBtn   = $('send-btn');
-const typingDiv = $('typing');
-const charCount = $('char-count');
-const userInfo  = $('user-info');
+const sidebar     = $('sidebar');
+const menuBtn     = $('menu-btn');
 
-// sidebar
-const sidebar = $('sidebar');
-const menuBtn = $('menu-btn');
+const imgModal    = $('img-modal');
+const modalImg    = $('modal-img');
+const modalDl     = $('modal-dl');
+const modalClose  = $('modal-close');
 
-// image modal
-const imgModal   = $('img-modal');
-const modalImg   = $('modal-img');
-const modalDl    = $('modal-dl');
-const modalClose = $('modal-close');
-
-// theme
 const themeToggle = $('theme-toggle');
 
-// app state
-let myName  = '';
-let history = [];  // last 40 messages sent to AI for context
 
-// slash commands  →  add new commands here easily
-const COMMANDS = {
-    '/clear': () => { clearAll(); sysMsg('chat cleared'); },
-    '/help':  () => sysMsg('commands: /clear, /help — just type to chat!')
+/* ---------- App State ---------- */
+
+let userName = '';
+let chatHistory = [];   // stores last 40 messages to give AI context
+
+const SLASH_COMMANDS = {
+    '/clear' : () => { clearAllMessages(); showSystemMsg('Chat cleared.'); },
+    '/help'  : () => showSystemMsg('Available commands: /clear, /help')
 };
 
 
-// ─────────────────────────────────────────────────────────────
-//  2. LOGIN / LEAVE
-// ─────────────────────────────────────────────────────────────
+/* ---------- Login & Logout ---------- */
 
-// submit login form → open chat
+// When user submits their name, open the chat
 loginForm.addEventListener('submit', function (e) {
     e.preventDefault();
     const name = nameInput.value.trim();
     if (!name) return;
-    myName = name;
+    userName = name;
     openChat();
 });
 
 function openChat() {
-    userInfo.innerHTML = `<span>👤 ${myName}</span>`;
-    loadChat();                          // restore previous session
+    userInfo.innerHTML = `<span>${userName}</span>`;
+    loadSavedChat();
 
     loginScreen.classList.remove('active');
     chatScreen.style.display = 'flex';
@@ -86,12 +73,12 @@ function openChat() {
     chatScreen.classList.add('active');
 
     if (msgList.children.length === 0) {
-        botMsg(`Hey ${myName}! Ask me anything 😊`);
+        showBotMessage(`Hey ${userName}, ask me anything.`);
     }
     msgBox.focus();
 }
 
-// leave button → go back to login
+// Leave button takes user back to login screen
 $('btn-leave').onclick = leaveChat;
 
 function leaveChat() {
@@ -101,47 +88,43 @@ function leaveChat() {
         chatScreen.style.display = 'none';
         loginScreen.classList.add('active');
         loginForm.reset();
-        clearAll();
-        myName = '';
+        clearAllMessages();
+        userName = '';
     }, 300);
 }
 
 
-// ─────────────────────────────────────────────────────────────
-//  3. SEND MESSAGE
-//  Flow: user types → sendMsg → askAI (api.js) → botMsg
-// ─────────────────────────────────────────────────────────────
+/* ---------- Sending & Receiving Messages ---------- */
 
-// click send button
-sendBtn.addEventListener('click', sendMsg);
+// Send on button click or Enter key
+sendBtn.addEventListener('click', sendMessage);
 
-// press Enter to send (Shift+Enter = new line)
 msgBox.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        sendMsg();
+        sendMessage();
     }
 });
 
-// auto-resize textarea + update char count while typing
+// Auto-resize the text box and update character counter as user types
 msgBox.addEventListener('input', function () {
     msgBox.style.height = 'auto';
     msgBox.style.height = Math.min(msgBox.scrollHeight, 120) + 'px';
 
-    const n = msgBox.value.length;
-    charCount.textContent = `${n} / 2000`;
-    charCount.style.color = n > 1800 ? 'var(--red)' : '';
+    const length = msgBox.value.length;
+    charCount.textContent = `${length} / 2000`;
+    charCount.style.color = length > 1800 ? 'var(--red)' : '';
 });
 
-async function sendMsg() {
+async function sendMessage() {
     const raw = msgBox.value.trim();
     if (!raw) return;
 
-    // check for slash commands first
-    const cmd = raw.split(' ')[0].toLowerCase();
-    if (COMMANDS[cmd]) {
+    // Check if user typed a slash command like /clear or /help
+    const command = raw.split(' ')[0].toLowerCase();
+    if (SLASH_COMMANDS[command]) {
         msgBox.value = '';
-        COMMANDS[cmd]();
+        SLASH_COMMANDS[command]();
         return;
     }
 
@@ -150,61 +133,58 @@ async function sendMsg() {
     charCount.textContent = '0 / 2000';
     charCount.style.color = '';
 
-    userMsg(text);
-    showTyping(true);
+    showUserMessage(text);
+    showTypingIndicator(true);
 
     try {
-        // step 1 — get AI reply from Python backend
-        const reply = await askAI(history, text);
+        // Send message to AI and wait for reply
+        const reply = await askAI(chatHistory, text);
 
-        // step 2 — update history (keep last 40 messages)
-        history.push({ role: 'user',      content: text  });
-        history.push({ role: 'assistant', content: reply });
-        if (history.length > 40) history = history.slice(-40);
+        // Save this exchange to history so AI remembers context
+        chatHistory.push({ role: 'user',      content: text  });
+        chatHistory.push({ role: 'assistant', content: reply });
+        if (chatHistory.length > 40) chatHistory = chatHistory.slice(-40);
 
-        // step 3 — fetch images (optional, won't break if it fails)
-        let imgs = [];
+        // Fetch related images based on what the user asked
+        let images = [];
         try {
-            imgs = await fetchImages(getKeyword(text), 4);
-        } catch (e) { /* images are optional */ }
+            images = await fetchImages(getKeyword(text), 4);
+        } catch (e) {}
 
-        // step 4 — fallback: use image URLs from AI reply if no images found
-        if (imgs.length === 0) imgs = extractImageUrls(reply);
+        // If no images found from API, try to find image URLs in the AI reply
+        if (images.length === 0) images = extractImageUrls(reply);
 
-        showTyping(false);
-        botMsg(reply, imgs);
+        showTypingIndicator(false);
+        showBotMessage(reply, images);
 
-    } catch (err) {
-        showTyping(false);
-        botMsg('Something went wrong: ' + err.message);
+    } catch (error) {
+        showTypingIndicator(false);
+        showBotMessage('Something went wrong: ' + error.message);
     }
 
     saveChat();
 }
 
-// show/hide the "AI is thinking..." indicator
-function showTyping(show) {
-    typingDiv.classList.toggle('hidden', !show);
-    if (show) scrollToBottom();
+// Show or hide the "AI is thinking..." animation
+function showTypingIndicator(visible) {
+    typingDiv.classList.toggle('hidden', !visible);
+    if (visible) scrollToBottom();
 }
 
 
-// ─────────────────────────────────────────────────────────────
-//  4. RENDER MESSAGES
-//  userMsg / botMsg / sysMsg all call makeRow internally
-// ─────────────────────────────────────────────────────────────
+/* ---------- Displaying Messages ---------- */
 
-function userMsg(text) {
-    msgList.appendChild(makeRow('user', myName[0].toUpperCase(), text, false));
+function showUserMessage(text) {
+    msgList.appendChild(buildMessageRow('user', userName[0].toUpperCase(), text, false));
     scrollToBottom();
 }
 
-function botMsg(text, imgs = []) {
-    msgList.appendChild(makeRow('bot', '🤖', text, true, imgs));
+function showBotMessage(text, images = []) {
+    msgList.appendChild(buildMessageRow('bot', 'AI', text, true, images));
     scrollToBottom();
 }
 
-function sysMsg(text) {
+function showSystemMsg(text) {
     const el = document.createElement('div');
     el.className   = 'sys-msg';
     el.textContent = text;
@@ -213,49 +193,45 @@ function sysMsg(text) {
     saveChat();
 }
 
-// builds a full message row: avatar + bubble + images + timestamp
-function makeRow(type, avatarText, text, useMarkdown, imgs = []) {
+// Builds a single message row with avatar, text bubble, images, and timestamp
+function buildMessageRow(type, avatarLabel, text, renderMarkdown, images = []) {
     const row = document.createElement('div');
     row.className = `msg-row ${type}`;
 
-    // avatar
     const avatar = document.createElement('div');
     avatar.className   = 'av';
-    avatar.textContent = avatarText;
+    avatar.textContent = avatarLabel;
 
-    // message body
     const body = document.createElement('div');
     body.className = 'msg-body';
 
-    // text bubble  (markdown for bot, plain text for user)
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
-    bubble.innerHTML = useMarkdown
+    bubble.innerHTML = renderMarkdown
         ? DOMPurify.sanitize(marked.parse(text))
         : DOMPurify.sanitize(text);
 
-    // timestamp
-    const time = document.createElement('span');
-    time.className   = 'ts';
-    time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timestamp = document.createElement('span');
+    timestamp.className   = 'ts';
+    timestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     body.appendChild(bubble);
-    if (imgs.length > 0) body.appendChild(makeImageGrid(imgs));
-    body.appendChild(time);
+    if (images.length > 0) body.appendChild(buildImageGrid(images));
+    body.appendChild(timestamp);
 
     row.appendChild(avatar);
     row.appendChild(body);
     return row;
 }
 
-// clear all messages + history
-$('btn-clear').onclick  = () => { clearAll(); sysMsg('chat cleared'); };
-$('clear-btn2').onclick = () => { clearAll(); sysMsg('chat cleared'); };
-$('btn-help').onclick   = () => COMMANDS['/help']();
+// Clear button (sidebar and topbar)
+$('btn-clear').onclick  = () => { clearAllMessages(); showSystemMsg('Chat cleared.'); };
+$('clear-btn2').onclick = () => { clearAllMessages(); showSystemMsg('Chat cleared.'); };
+$('btn-help').onclick   = () => SLASH_COMMANDS['/help']();
 
-function clearAll() {
+function clearAllMessages() {
     msgList.innerHTML = '';
-    history = [];
+    chatHistory = [];
     saveChat();
 }
 
@@ -264,109 +240,103 @@ function scrollToBottom() {
 }
 
 
-// ─────────────────────────────────────────────────────────────
-//  5. IMAGE GRID & MODAL
-//  makeImageGrid → makeImageCard → openModal / closeModal
-// ─────────────────────────────────────────────────────────────
+/* ---------- Image Grid & Full-Screen Modal ---------- */
 
-function makeImageGrid(imgs) {
+// Creates a grid of image cards below a bot message
+function buildImageGrid(images) {
     const grid = document.createElement('div');
     grid.className = 'img-grid';
 
-    imgs.forEach(function (imgData) {
-        // show skeleton placeholder while image loads
+    images.forEach(function (imageData) {
+        // Show a loading placeholder while the image downloads
         const skeleton = document.createElement('div');
         skeleton.className = 'skeleton';
         grid.appendChild(skeleton);
 
-        const card = makeImageCard(imgData);
+        const card = buildImageCard(imageData);
         const img  = card.querySelector('img');
 
         img.addEventListener('load',  () => skeleton.replaceWith(card), { once: true });
         img.addEventListener('error', () => skeleton.remove(),          { once: true });
-        img.src = imgData.thumb;  // set src last to trigger load/error
+        img.src = imageData.thumb;
     });
 
     return grid;
 }
 
-function makeImageCard(imgData) {
+// Creates a single image card with a hover overlay (View / Download)
+function buildImageCard(imageData) {
     const card = document.createElement('div');
     card.className = 'img-card';
 
     const img = document.createElement('img');
-    img.alt     = imgData.alt;
+    img.alt     = imageData.alt;
     img.loading = 'lazy';
 
-    // hover overlay with view + download buttons
     const overlay = document.createElement('div');
     overlay.className = 'img-overlay';
 
     const viewBtn = document.createElement('button');
-    viewBtn.textContent = '🔍 View';
-    viewBtn.onclick = () => openModal(imgData.full, imgData.download, imgData.alt);
+    viewBtn.textContent = 'View';
+    viewBtn.onclick = () => openImageModal(imageData.full, imageData.download, imageData.alt);
 
-    const dlBtn = document.createElement('a');
-    dlBtn.textContent = '⬇';
-    dlBtn.href     = imgData.download;
-    dlBtn.download = imgData.alt || 'photo';
-    dlBtn.target   = '_blank';
+    const downloadLink = document.createElement('a');
+    downloadLink.textContent = 'Download';
+    downloadLink.href     = imageData.download;
+    downloadLink.download = imageData.alt || 'photo';
+    downloadLink.target   = '_blank';
 
     overlay.appendChild(viewBtn);
-    overlay.appendChild(dlBtn);
+    overlay.appendChild(downloadLink);
     card.appendChild(img);
     card.appendChild(overlay);
 
-    // clicking the card (not the buttons) also opens modal
     card.onclick = (e) => {
-        if (e.target === viewBtn || e.target === dlBtn) return;
-        openModal(imgData.full, imgData.download, imgData.alt);
+        if (e.target === viewBtn || e.target === downloadLink) return;
+        openImageModal(imageData.full, imageData.download, imageData.alt);
     };
 
     return card;
 }
 
-function openModal(src, dl, alt) {
+function openImageModal(src, downloadUrl, alt) {
     modalImg.src     = src;
     modalImg.alt     = alt;
-    modalDl.href     = dl;
+    modalDl.href     = downloadUrl;
     modalDl.download = alt || 'photo';
     imgModal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
 }
 
-function closeModal() {
+function closeImageModal() {
     imgModal.classList.add('hidden');
     modalImg.src = '';
     document.body.style.overflow = '';
 }
 
-// three ways to close modal: button, backdrop click, Escape key
-modalClose.onclick          = closeModal;
-$('modal-bg').onclick       = closeModal;
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+// Three ways to close the modal: close button, click outside, or press Escape
+modalClose.onclick    = closeImageModal;
+$('modal-bg').onclick = closeImageModal;
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeImageModal(); });
 
 
-// ─────────────────────────────────────────────────────────────
-//  6. SIDEBAR & THEME
-// ─────────────────────────────────────────────────────────────
+/* ---------- Theme (Light / Dark Mode) ---------- */
 
-// apply saved theme on load
 const savedTheme = localStorage.getItem('theme') || 'dark';
 document.documentElement.setAttribute('data-theme', savedTheme);
 themeToggle.checked = savedTheme === 'light';
 
-// toggle light/dark mode
 themeToggle.addEventListener('change', function () {
-    const t = themeToggle.checked ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', t);
-    localStorage.setItem('theme', t);
+    const theme = themeToggle.checked ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
 });
 
-// hamburger menu (mobile only)
+
+/* ---------- Sidebar (Mobile Menu) ---------- */
+
 menuBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
 
-// close sidebar when clicking outside on mobile
 document.addEventListener('click', function (e) {
     if (window.innerWidth <= 640 && sidebar.classList.contains('open')) {
         if (!sidebar.contains(e.target) && e.target !== menuBtn) {
@@ -376,90 +346,83 @@ document.addEventListener('click', function (e) {
 });
 
 
-// ─────────────────────────────────────────────────────────────
-//  7. SAVE & LOAD CHAT  (localStorage)
-//  saveChat → called after every message
-//  loadChat → called once when chat screen opens
-// ─────────────────────────────────────────────────────────────
+/* ---------- Save & Load Chat History ---------- */
 
+// Saves the current chat to browser storage so it survives page refresh
 function saveChat() {
-    const msgs = [];
+    const messages = [];
 
     for (const el of msgList.children) {
-        // system messages (e.g. "chat cleared")
         if (el.classList.contains('sys-msg')) {
-            msgs.push({ type: 'sys', text: el.textContent });
+            messages.push({ type: 'sys', text: el.textContent });
             continue;
         }
 
         const isUser = el.classList.contains('user');
         const bubble = el.querySelector('.bubble');
         const ts     = el.querySelector('.ts')?.textContent || '';
-
-        // save image src so they reload correctly
-        const imgs = [...el.querySelectorAll('.img-card img')].map(img => ({
+        const imgs   = [...el.querySelectorAll('.img-card img')].map(img => ({
             thumb: img.src, full: img.src, download: img.src, alt: img.alt
         }));
 
-        msgs.push({
-            type: isUser ? 'user' : 'bot',
-            html: bubble?.innerHTML || '',
+        messages.push({
+            type : isUser ? 'user' : 'bot',
+            html : bubble?.innerHTML || '',
             ts,
             imgs
         });
     }
 
-    localStorage.setItem('mychat', JSON.stringify({ msgs, history }));
+    localStorage.setItem('mychat', JSON.stringify({ messages, history: chatHistory }));
 }
 
-function loadChat() {
+// Loads the saved chat from browser storage when user opens the app
+function loadSavedChat() {
     const raw = localStorage.getItem('mychat');
     if (!raw) return;
 
     try {
         const data = JSON.parse(raw);
-        history = data.history || [];
+        chatHistory = data.history || [];
 
-        for (const m of data.msgs) {
-            // restore system messages
-            if (m.type === 'sys') {
+        for (const msg of data.messages || []) {
+            if (msg.type === 'sys') {
                 const el = document.createElement('div');
                 el.className   = 'sys-msg';
-                el.textContent = m.text;
+                el.textContent = msg.text;
                 msgList.appendChild(el);
                 continue;
             }
 
-            // restore user/bot messages
             const row = document.createElement('div');
-            row.className = `msg-row ${m.type}`;
+            row.className = `msg-row ${msg.type}`;
 
-            const av = document.createElement('div');
-            av.className   = 'av';
-            av.textContent = m.type === 'user' ? myName[0].toUpperCase() : '🤖';
+            const avatar = document.createElement('div');
+            avatar.className   = 'av';
+            avatar.textContent = msg.type === 'user' ? userName[0].toUpperCase() : 'AI';
 
             const body = document.createElement('div');
             body.className = 'msg-body';
 
             const bubble = document.createElement('div');
             bubble.className = 'bubble';
-            bubble.innerHTML = DOMPurify.sanitize(m.html);
+            bubble.innerHTML = DOMPurify.sanitize(msg.html);
 
-            const ts = document.createElement('span');
-            ts.className   = 'ts';
-            ts.textContent = m.ts;
+            const timestamp = document.createElement('span');
+            timestamp.className   = 'ts';
+            timestamp.textContent = msg.ts;
 
             body.appendChild(bubble);
-            if (m.imgs?.length > 0) body.appendChild(makeImageGrid(m.imgs));
-            body.appendChild(ts);
+            if (msg.imgs?.length > 0) body.appendChild(buildImageGrid(msg.imgs));
+            body.appendChild(timestamp);
 
-            row.appendChild(av);
+            row.appendChild(avatar);
             row.appendChild(body);
             msgList.appendChild(row);
         }
 
         scrollToBottom();
     } catch (e) {
-        console.warn('Could not load saved chat:', e);
+        console.warn('Could not restore saved chat:', e);
     }
 }

@@ -4,7 +4,7 @@
 //  API keys are safe in server.py, never exposed here
 // =============================================================
 
-const BASE_URL = 'http://localhost:5000';
+const BASE_URL = 'https://ai-chatbot-1-401a.onrender.com';
 
 
 // ── Send message to AI and get a reply ────────────────────────

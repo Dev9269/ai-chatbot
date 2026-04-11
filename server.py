@@ -110,6 +110,7 @@ def images():
 
 # ── Start ─────────────────────────────────────────────────────
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
     print('\n  Backend running at http://localhost:5000')
     print('  Open index.html in your browser as usual.\n')
-    app.run(debug=True, port=5000)
+    app.run(host='0.0.0.0', port=port, debug=False)

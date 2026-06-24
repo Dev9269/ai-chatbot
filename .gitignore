@@ -3,8 +3,35 @@
 
 # Python cache
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Node / frontend
+node_modules/
+package-lock.json
+
+# Logs
+logs/
+*.log
+
+# Build artifacts
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
 
 # OS files
 .DS_Store
 Thumbs.db
+
+# Docker
+.dockerignore

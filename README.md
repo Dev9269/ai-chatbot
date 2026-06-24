@@ -1,5 +1,14 @@
 # 🤖 AI Chatbot
 
+<p align="left">
+  <img src="https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python" />
+  <img src="https://img.shields.io/badge/Flask-3.0-000000?style=flat-square&logo=flask" />
+  <img src="https://img.shields.io/badge/Groq_AI-Llama_3.3-FF6600?style=flat-square" />
+  <img src="https://img.shields.io/badge/Unsplash_API-000000?style=flat-square&logo=unsplash" />
+  <img src="https://img.shields.io/github/stars/Dev9269/ai-chatbot?style=flat-square&label=Stars" />
+  <img src="https://img.shields.io/github/license/Dev9269/ai-chatbot?style=flat-square" />
+</p>
+
 A smart AI chatbot built with HTML, CSS, JavaScript and a Python backend.  
 Built by [@Jainammaru](https://www.instagram.com/jainammaru_/)
 
@@ -63,6 +72,30 @@ Open `index.html` in your browser (double-click or use Live Server in VS Code).
 ├── .env.example     → Template for others to fill in
 ├── .gitignore       → Blocks .env from GitHub
 └── requirements.txt → Python dependencies
+```
+
+---
+
+## 🐳 Docker Deployment
+
+```bash
+# Build the image
+docker build -t ai-chatbot .
+
+# Run the container
+docker run -d -p 5000:5000 --env-file .env ai-chatbot
+```
+
+Or use with Docker Compose:
+
+```yaml
+services:
+  chatbot:
+    build: .
+    ports:
+      - "5000:5000"
+    env_file: .env
+    restart: unless-stopped
 ```
 
 ---

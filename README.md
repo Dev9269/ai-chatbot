@@ -1,16 +1,17 @@
+<div align="center">
+
 # 🤖 AI Chatbot
 
-<p align="left">
-  <img src="https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python" />
-  <img src="https://img.shields.io/badge/Flask-3.0-000000?style=flat-square&logo=flask" />
-  <img src="https://img.shields.io/badge/Groq_AI-Llama_3.3-FF6600?style=flat-square" />
-  <img src="https://img.shields.io/badge/Unsplash_API-000000?style=flat-square&logo=unsplash" />
-  <img src="https://img.shields.io/github/stars/Dev9269/ai-chatbot?style=flat-square&label=Stars" />
-  <img src="https://img.shields.io/github/license/Dev9269/ai-chatbot?style=flat-square" />
-</p>
+[![Stars](https://img.shields.io/github/stars/Dev9269/ai-chatbot?style=flat-square&logo=github&color=gold)](https://github.com/Dev9269/ai-chatbot)
+[![Forks](https://img.shields.io/github/forks/Dev9269/ai-chatbot?style=flat-square&logo=github&color=blue)](https://github.com/Dev9269/ai-chatbot/forks)
+[![License](https://img.shields.io/github/license/Dev9269/ai-chatbot?style=flat-square&color=brightgreen)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen?style=flat-square)](https://github.com/Dev9269/ai-chatbot/pulls)
 
-A smart AI chatbot built with HTML, CSS, JavaScript and a Python backend.  
-Built by [@Jainammaru](https://www.instagram.com/jainammaru_/)
+A smart AI chatbot with Groq AI (Llama 3.3 70B) and Unsplash image integration.
+
+**Created by** [Jainam Maru](https://github.com/Dev9269)
+
+</div>
 
 ---
 

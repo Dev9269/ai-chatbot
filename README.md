@@ -6,10 +6,13 @@
 [![Forks](https://img.shields.io/github/forks/Dev9269/ai-chatbot?style=flat-square&logo=github&color=blue)](https://github.com/Dev9269/ai-chatbot/forks)
 [![License](https://img.shields.io/github/license/Dev9269/ai-chatbot?style=flat-square&color=brightgreen)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen?style=flat-square)](https://github.com/Dev9269/ai-chatbot/pulls)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Dev9269.github.io-0891b2?style=flat-square&logo=githubpages&logoColor=white)](https://dev9269.github.io/ai-chatbot/)
 
 A smart AI chatbot with Groq AI (Llama 3.3 70B) and Unsplash image integration.
 
 **Created by** [Jainam Maru](https://github.com/Dev9269)
+
+**🌐 Live:** [dev9269.github.io/ai-chatbot](https://dev9269.github.io/ai-chatbot/)
 
 </div>
 

@@ -31,8 +31,8 @@ A smart AI chatbot with Groq AI (Llama 3.3 70B) and Unsplash image integration.
 
 ### 1. Clone the repo
 ```
-git clone https://github.com/dev9269/your-repo-name.git
-cd your-repo-name
+git clone https://github.com/Dev9269/ai-chatbot.git
+cd ai-chatbot
 ```
 
 ### 2. Install Python dependencies
@@ -67,15 +67,22 @@ Open `index.html` in your browser (double-click or use Live Server in VS Code).
 
 ## 📁 Project Structure
 ```
-├── index.html       → UI structure
-├── style.css        → All styling
-├── app.js           → Frontend logic
-├── api.js           → Talks to Python backend
-├── server.py        → Python backend (Groq + Unsplash)
-├── .env             → Your API keys (NOT on GitHub)
-├── .env.example     → Template for others to fill in
-├── .gitignore       → Blocks .env from GitHub
-└── requirements.txt → Python dependencies
+├── index.html          → UI structure
+├── style.css           → All styling
+├── app.js              → Frontend logic
+├── api.js              → Talks to Python backend
+├── server.py           → Python backend (Groq + Unsplash)
+├── .env                → Your API keys (NOT on GitHub)
+├── .env.example        → Template for others to fill in
+├── .gitignore          → Blocks .env from GitHub
+├── .dockerignore       → Files excluded from Docker build
+├── Dockerfile          → Container build instructions
+├── requirements.txt    → Python dependencies
+└── .github/
+    ├── FUNDING.yml     → Sponsor links
+    └── workflows/
+        ├── ci.yml      → Lint check on push/PR
+        └── deploy.yml  → GitHub Pages deployment
 ```
 
 ---

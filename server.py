@@ -25,13 +25,26 @@ app = Flask(__name__)
 CORS(app)
 
 
+@app.after_request
+def add_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    return response
+
+
 # ---- API Keys (loaded from .env file, never hardcoded) ----
 
-GROQ_KEY     = os.getenv('GROQ_KEY')
-UNSPLASH_KEY = os.getenv('UNSPLASH_KEY')
+GROQ_KEY = os.getenv("GROQ_KEY")
+UNSPLASH_KEY = os.getenv("UNSPLASH_KEY")
 
 if not GROQ_KEY or not UNSPLASH_KEY:
-    raise Exception('API keys missing. Copy .env.example to .env and add your keys.')
+    import sys
+
+    print(
+        "ERROR: API keys missing. Copy .env.example to .env and add your keys.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 
 # ---- AI Personality & Reply Style ----
@@ -46,80 +59,96 @@ SYSTEM_PROMPT = """You are a smart, friendly assistant. Follow these rules:
 
 # ---- Route 1: Chat with AI ----
 
-@app.route('/api/chat', methods=['POST'])
+
+@app.route("/api/chat", methods=["POST"])
 def chat():
-    data    = request.json
-    history = data.get('history', [])
-    message = data.get('message', '').strip()
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "Invalid JSON payload."}), 400
+
+    history = data.get("history", [])
+    message = data.get("message", "").strip()
 
     if not message:
-        return jsonify({'error': 'Message cannot be empty.'}), 400
+        return jsonify({"error": "Message cannot be empty."}), 400
+
+    if len(message) > 4000:
+        return jsonify({"error": "Message too long (max 4000 characters)."}), 400
 
     # Build the full conversation to send to Groq
-    messages = [{'role': 'system', 'content': SYSTEM_PROMPT}] + history + [{'role': 'user', 'content': message}]
+    messages = (
+        [{"role": "system", "content": SYSTEM_PROMPT}]
+        + history[-40:]
+        + [{"role": "user", "content": message}]
+    )
 
     try:
         response = requests.post(
-            'https://api.groq.com/openai/v1/chat/completions',
+            "https://api.groq.com/openai/v1/chat/completions",
             headers={
-                'Authorization': f'Bearer {GROQ_KEY}',
-                'Content-Type' : 'application/json'
+                "Authorization": f"Bearer {GROQ_KEY}",
+                "Content-Type": "application/json",
             },
             json={
-                'model'      : 'llama-3.3-70b-versatile',
-                'messages'   : messages,
-                'max_tokens' : 300,
-                'temperature': 0.7
+                "model": "llama-3.3-70b-versatile",
+                "messages": messages,
+                "max_tokens": 300,
+                "temperature": 0.7,
             },
-            timeout=15
+            timeout=15,
         )
         response.raise_for_status()
-        reply = response.json()['choices'][0]['message']['content']
-        return jsonify({'reply': reply})
+        reply = response.json()["choices"][0]["message"]["content"]
+        return jsonify({"reply": reply})
 
     except requests.exceptions.Timeout:
-        return jsonify({'error': 'AI took too long to respond. Please try again.'}), 504
+        return jsonify({"error": "AI took too long to respond. Please try again."}), 504
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 # ---- Route 2: Fetch Images from Unsplash ----
 
-@app.route('/api/images', methods=['GET'])
+
+@app.route("/api/images", methods=["GET"])
 def images():
-    query = request.args.get('q', '').strip()
-    count = int(request.args.get('count', 4))
+    query = request.args.get("q", "").strip()
+
+    try:
+        count = max(1, min(int(request.args.get("count", 4)), 12))
+    except (ValueError, TypeError):
+        count = 4
 
     if not query:
-        return jsonify({'images': []})
+        return jsonify({"images": []})
 
     try:
         response = requests.get(
-            'https://api.unsplash.com/search/photos',
-            headers={'Authorization': f'Client-ID {UNSPLASH_KEY}'},
-            params={'query': query, 'per_page': count, 'orientation': 'squarish'},
-            timeout=10
+            "https://api.unsplash.com/search/photos",
+            headers={"Authorization": f"Client-ID {UNSPLASH_KEY}"},
+            params={"query": query, "per_page": count, "orientation": "squarish"},
+            timeout=10,
         )
         response.raise_for_status()
 
-        results = response.json().get('results', [])
-        images  = [
+        results = response.json().get("results", [])
+        images = [
             {
-                'thumb'   : img['urls']['small'],
-                'full'    : img['urls']['regular'],
-                'download': img['links']['download'],
-                'alt'     : img.get('alt_description') or query
+                "thumb": img["urls"]["small"],
+                "full": img["urls"]["regular"],
+                "download": img["links"]["download"],
+                "alt": img.get("alt_description") or query,
             }
             for img in results
         ]
-        return jsonify({'images': images})
+        return jsonify({"images": images})
 
     except Exception as e:
-        return jsonify({'images': [], 'error': str(e)})
+        return jsonify({"images": [], "error": str(e)})
 
 
 # ---- Start the Server ----
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)

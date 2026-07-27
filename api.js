@@ -6,7 +6,9 @@
     API keys are never stored here — they live safely in server.py.
 */
 
-const BACKEND_URL = 'https://ai-chatbot-1-401a.onrender.com';
+const BACKEND_URL = window.location.hostname.includes('github.io')
+    ? 'https://ai-chatbot-1-401a.onrender.com'
+    : '';
 
 
 /* Send the user's message to the AI and return the reply */

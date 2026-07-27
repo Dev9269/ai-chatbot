@@ -23,7 +23,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+ALLOWED_ORIGINS = os.environ.get(
+    "CORS_ORIGINS",
+    "https://dev9269.github.io,https://ai-chatbot-1-401a.onrender.com",
+).split(",")
+
+CORS(app, origins=ALLOWED_ORIGINS)
 
 FRONTEND_DIR = Path(__file__).parent
 
@@ -42,6 +47,10 @@ def serve_static(filename):
 def add_security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Strict-Transport-Security"] = (
+        "max-age=31536000; includeSubDomains"
+    )
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     return response
 
 

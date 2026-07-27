@@ -3,7 +3,7 @@ server.py - Python Backend
 --------------------------
 This is the backend server for the AI Chatbot.
 It handles two things:
-  1. /api/chat   - Takes the user's message, sends it to Groq AI, returns the reply
+  1. /api/chat   - Takes the user's message, sends it to Gemini AI, returns the reply
   2. /api/images - Takes a keyword, searches Unsplash, returns relevant photos
 
 API keys are stored here safely and never sent to the browser.
@@ -34,10 +34,10 @@ def add_security_headers(response):
 
 # ---- API Keys (loaded from .env file, never hardcoded) ----
 
-GROQ_KEY = os.getenv("GROQ_KEY")
+GEMINI_KEY = os.getenv("GEMINI_KEY")
 UNSPLASH_KEY = os.getenv("UNSPLASH_KEY")
 
-if not GROQ_KEY or not UNSPLASH_KEY:
+if not GEMINI_KEY or not UNSPLASH_KEY:
     import sys
 
     print(
@@ -45,6 +45,12 @@ if not GROQ_KEY or not UNSPLASH_KEY:
         file=sys.stderr,
     )
     sys.exit(1)
+
+
+GEMINI_URL = (
+    "https://generativelanguage.googleapis.com/v1beta/models/"
+    "gemini-2.0-flash-lite:generateContent"
+)
 
 
 # ---- AI Personality & Reply Style ----
@@ -75,30 +81,31 @@ def chat():
     if len(message) > 4000:
         return jsonify({"error": "Message too long (max 4000 characters)."}), 400
 
-    # Build the full conversation to send to Groq
-    messages = (
-        [{"role": "system", "content": SYSTEM_PROMPT}]
-        + history[-40:]
-        + [{"role": "user", "content": message}]
-    )
+    # Build Gemini contents array from history
+    contents = []
+    for msg in history[-40:]:
+        role = "model" if msg.get("role") == "assistant" else "user"
+        contents.append({"role": role, "parts": [{"text": msg["content"]}]})
+    contents.append({"role": "user", "parts": [{"text": message}]})
+
+    payload = {
+        "contents": contents,
+        "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+    }
 
     try:
         response = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
+            GEMINI_URL,
             headers={
-                "Authorization": f"Bearer {GROQ_KEY}",
                 "Content-Type": "application/json",
+                "X-goog-api-key": GEMINI_KEY,
             },
-            json={
-                "model": "llama-3.3-70b-versatile",
-                "messages": messages,
-                "max_tokens": 300,
-                "temperature": 0.7,
-            },
+            json=payload,
             timeout=15,
         )
         response.raise_for_status()
-        reply = response.json()["choices"][0]["message"]["content"]
+        data = response.json()
+        reply = data["candidates"][0]["content"]["parts"][0]["text"]
         return jsonify({"reply": reply})
 
     except requests.exceptions.Timeout:

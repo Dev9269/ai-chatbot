@@ -11,18 +11,26 @@ const BACKEND_URL = 'https://ai-chatbot-1-401a.onrender.com';
 
 /* Send the user's message to the AI and return the reply */
 export async function askAI(history, message) {
-    const response = await fetch(`${BACKEND_URL}/api/chat`, {
-        method  : 'POST',
-        headers : { 'Content-Type': 'application/json' },
-        body    : JSON.stringify({ history, message })
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20000);
 
-    if (response.status === 429) throw new Error('Too many requests, please wait a moment.');
-    if (!response.ok) throw new Error('Server error: ' + response.status);
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/chat`, {
+            method  : 'POST',
+            headers : { 'Content-Type': 'application/json' },
+            body    : JSON.stringify({ history, message }),
+            signal  : controller.signal
+        });
 
-    const data = await response.json();
-    if (data.error) throw new Error(data.error);
-    return data.reply;
+        if (response.status === 429) throw new Error('Too many requests, please wait a moment.');
+        if (!response.ok) throw new Error('Server error: ' + response.status);
+
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+        return data.reply;
+    } finally {
+        clearTimeout(timer);
+    }
 }
 
 
@@ -30,11 +38,21 @@ export async function askAI(history, message) {
 export async function fetchImages(query, count = 4) {
     if (!query) return [];
 
-    const response = await fetch(`${BACKEND_URL}/api/images?q=${encodeURIComponent(query)}&count=${count}`);
-    if (!response.ok) return [];
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
 
-    const data = await response.json();
-    return data.images || [];
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/images?q=${encodeURIComponent(query)}&count=${count}`, {
+            signal: controller.signal
+        });
+        if (!response.ok) return [];
+        const data = await response.json();
+        return data.images || [];
+    } catch {
+        return [];
+    } finally {
+        clearTimeout(timer);
+    }
 }
 
 

@@ -48,7 +48,8 @@ let chatHistory = [];   // stores last 40 messages to give AI context
 
 const SLASH_COMMANDS = {
     '/clear' : () => { clearAllMessages(); showSystemMsg('Chat cleared.'); },
-    '/help'  : () => showSystemMsg('Available commands: /clear, /help')
+    '/help'  : () => showSystemMsg('Available commands: /clear, /export, /help'),
+    '/export': () => exportChat()
 };
 
 
@@ -228,11 +229,42 @@ function buildMessageRow(type, avatarLabel, text, renderMarkdown, images = []) {
 $('btn-clear').onclick  = () => { clearAllMessages(); showSystemMsg('Chat cleared.'); };
 $('clear-btn2').onclick = () => { clearAllMessages(); showSystemMsg('Chat cleared.'); };
 $('btn-help').onclick   = () => SLASH_COMMANDS['/help']();
+$('btn-export').onclick = exportChat;
 
 function clearAllMessages() {
     msgList.innerHTML = '';
     chatHistory = [];
     saveChat();
+}
+
+function exportChat() {
+    if (chatHistory.length === 0) {
+        showSystemMsg('No messages to export.');
+        return;
+    }
+
+    const exportData = {
+        exportedAt: new Date().toISOString(),
+        user: userName,
+        totalMessages: chatHistory.length,
+        conversation: chatHistory.map(msg => ({
+            role: msg.role,
+            content: msg.content,
+            timestamp: new Date().toLocaleString()
+        }))
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chat-export-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showSystemMsg(`Conversation exported (${chatHistory.length} messages).`);
 }
 
 function scrollToBottom() {

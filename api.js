@@ -1,17 +1,23 @@
-/*
-    api.js - Connects Frontend to Backend
-    --------------------------------------
-    This file is the bridge between the browser and the Python server.
-    It sends the user's message to the server and gets back an AI reply and images.
-    API keys are never stored here — they live safely in server.py.
-*/
+/**
+ * api.js — Connects Frontend to Backend
+ *
+ * Bridge between the browser and the Python server.
+ * Sends messages to the AI backend and fetches Unsplash images.
+ * API keys are never stored here — they live safely in server.py.
+ */
 
 const BACKEND_URL = window.location.hostname.includes('github.io')
     ? 'https://ai-chatbot-1-401a.onrender.com'
     : '';
 
-
-/* Send the user's message to the AI and return the reply */
+/**
+ * Send a chat message to the AI backend and return the reply text.
+ *
+ * @param {Array<{role: string, content: string}>} history - Previous messages for context.
+ * @param {string} message - The user's new message.
+ * @returns {Promise<string>} The AI reply text.
+ * @throws {Error} If the server returns an error or the request times out.
+ */
 export async function askAI(history, message) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 20000);
@@ -36,7 +42,13 @@ export async function askAI(history, message) {
 }
 
 
-/* Fetch relevant images from Unsplash based on a search keyword */
+/**
+ * Fetch relevant images from Unsplash based on a search keyword.
+ *
+ * @param {string} query - The search term for images.
+ * @param {number} [count=4] - Number of images to fetch (max 12).
+ * @returns {Promise<Array<{thumb: string, full: string, download: string, alt: string}>>}
+ */
 export async function fetchImages(query, count = 4) {
     if (!query) return [];
 
@@ -58,7 +70,14 @@ export async function fetchImages(query, count = 4) {
 }
 
 
-/* Pull out the most meaningful keyword(s) from the user's message for image search */
+/**
+ * Extract meaningful keywords from a user message for image search.
+ *
+ * Strips common words and punctuation, returns up to 3 keywords.
+ *
+ * @param {string} message - The user's message text.
+ * @returns {string} Space-separated keywords (up to 3) or first 25 chars fallback.
+ */
 export function getKeyword(message) {
     const commonWords = [
         'a','an','the','is','are','was','were','be','been','have','has',
@@ -79,7 +98,12 @@ export function getKeyword(message) {
 }
 
 
-/* Find any direct image URLs that the AI included in its reply */
+/**
+ * Extract direct image URLs (jpg/png/gif/webp) from AI reply text.
+ *
+ * @param {string} text - The AI reply content.
+ * @returns {Array<{thumb: string, full: string, download: string, alt: string}>}
+ */
 export function extractImageUrls(text) {
     const matches = text.match(/https?:\/\/[^\s)"']+\.(?:jpg|jpeg|png|gif|webp)(?:[^\s)"']*)?/gi);
     return (matches || []).slice(0, 4).map(url => ({

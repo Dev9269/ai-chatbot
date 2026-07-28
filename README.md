@@ -111,6 +111,62 @@ services:
 
 ---
 
+## 🚢 Deployment
+
+### GitHub Pages (Frontend)
+
+The frontend (`index.html`, `style.css`, `app.js`) is automatically deployed to GitHub Pages via the `deploy.yml` workflow on every push to `master`.
+
+### Docker Deployment
+
+```bash
+# Build the image
+docker build -t ai-chatbot .
+
+# Run the container
+docker run -d -p 5000:5000 --env-file .env ai-chatbot
+```
+
+Or using Docker Compose:
+
+```yaml
+services:
+  chatbot:
+    build: .
+    ports:
+      - "5000:5000"
+    env_file: .env
+    restart: unless-stopped
+```
+
+### Manual Server Deployment
+
+```bash
+# Install dependencies
+python -m pip install -r requirements.txt
+
+# Set environment variables
+export GROQ_KEY=your_groq_api_key
+export UNSPLASH_KEY=your_unsplash_access_key
+
+# Start the server
+python server.py
+```
+
+### Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `GROQ_KEY` | Yes | Groq API key for Llama 3.3 70B |
+| `UNSPLASH_KEY` | Yes | Unsplash API access key |
+
+### Production Considerations
+
+- Use a reverse proxy (nginx/Caddy) in front of the Python backend
+- Enable HTTPS with Let's Encrypt
+- Set `PYTHONUNBUFFERED=1` for proper log streaming
+- Monitor with `--workers 2` for handling concurrent requests
+
 ## 🔗 Connect
 - Instagram → https://www.instagram.com/jainammaru_/
 - GitHub → https://github.com/dev9269

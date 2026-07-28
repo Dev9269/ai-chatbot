@@ -35,16 +35,19 @@ FRONTEND_DIR = Path(__file__).parent
 
 @app.route("/")
 def serve_index():
+    """Serve the main chatbot frontend (index.html)."""
     return send_from_directory(FRONTEND_DIR, "index.html")
 
 
 @app.route("/<path:filename>")
 def serve_static(filename):
+    """Serve static assets (CSS, JS, images, etc.)."""
     return send_from_directory(FRONTEND_DIR, filename)
 
 
 @app.after_request
 def add_security_headers(response):
+    """Inject security headers into every HTTP response."""
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Strict-Transport-Security"] = (

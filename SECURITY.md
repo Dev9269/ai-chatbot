@@ -2,34 +2,44 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in AI Chatbot, please report it privately.
+If you discover a security vulnerability in **AI Chatbot**, **do not** open a public GitHub issue. Report it privately.
 
-**Do not** open a public GitHub issue. Instead, send a detailed report to:
+**Report via GitHub Security Advisory:**
+1. Go to the repository's **Security** tab
+2. Click **Report a vulnerability** (or use `https://github.com/Dev9269/ai-chatbot/security/advisories/new`)
+3. Fill in the details
 
-- **Email**: [jainam.maru@example.com](mailto:jainam.maru@example.com)
-- **Alternative**: Use the [GitHub Security Advisory](https://github.com/Dev9269/ai-chatbot/security/advisories/new) tab.
+**Or email directly:**
+[jainammaru567000@gmail.com](mailto:jainammaru567000@gmail.com)
+GPG fingerprint: `00D6CCEA36D10407`
 
-Include the following in your report:
-
+### Please include:
 - Type of vulnerability
-- Steps to reproduce
-- Affected version(s)
-- Any potential impact
+- Steps to reproduce (PoC preferred)
+- Affected versions
+- Potential impact
+- Any suggested fix (optional)
 
 ## Response Timeline
 
-- **Acknowledgment** within 48 hours.
-- We'll work with you to understand and validate the issue.
-- A fix will be shipped as soon as possible, typically within 7 days.
-- You'll be credited in the release notes (if desired).
-
-## Scope
-
-This policy covers the source code in this repository. API keys for Groq and Unsplash are managed by their respective services — report their vulnerabilities through their own programs.
+| Step | Timeframe |
+|------|-----------|
+| Acknowledgment | Within 48 hours |
+| Initial assessment | Within 5 business days |
+| Fix timeline | Communicated based on severity |
+| Coordinated disclosure | 90 days after fix shipped |
 
 ## Supported Versions
 
 | Version | Supported |
-| ------- | --------- |
-| latest  | ✅        |
-| older   | ❌        |
+|---------|-----------|
+| latest  | ✅ |
+| older   | ❌ |
+
+## Scope
+
+This policy covers the source code, API endpoints, and frontend in this repository. API keys (Gemini, Unsplash) are managed via environment variables — compromised keys should be rotated immediately. Dependencies (FastAPI, etc.) should be reported to their respective maintainers.
+
+## Coordinated Disclosure
+
+We follow coordinated disclosure. Please allow us reasonable time to fix the issue before any public disclosure. We will credit reporters in release notes (with permission).
